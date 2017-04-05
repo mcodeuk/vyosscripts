@@ -12,12 +12,12 @@
 CFGFILE=/etc/syncme.cfg 
 IAM=`whoami`
 HOSTNAME=`hostname`
-if [ -f $CFGFILE ]; then
+if [ ! -f $CFGFILE ]; then
 	echo 'USER="syncme"' > $CFGFILE 
-	echo 'SCRIPT=/usr/local/bin/scriptme' >> $CFGFILE 
-	echo 'PEERHOST=syncpeer'
+	echo 'SCRIPT=/usr/local/bin/syncme' >> $CFGFILE 
+	echo 'PEERHOST=syncpeer' >> $CFGFILE
 	echo 'KEYFILE="vyosautosync.key"' >> $CFGFILE  
-	echo 'PORT=22' >> $CFGFILE 
+	echo 'PORT=22' >> $CFGFILE
 	echo "Review the content of $CFGFILE"
 	echo "Perform the following Checks and Modifications"
 	echo "1) Ensure that the USER value is correct and has been created manually inside both VYOS routers with admin level"
@@ -51,9 +51,9 @@ if [ $IAM = $USER ]; then
                 cnt=$((cnt+1))
 	  done
 	CHANGESET+="commit;save"
-        echo "Sending $cnt lines of configuration to Remote Router syncpeer"
+        echo "Sending $cnt lines of configuration to Remote Router $PEERHOST"
 #	echo -e "\t            ##############"
-	sshcmd="ssh -v -oStrictHostKeyChecking=no -p $PORT -o BatchMode=yes -o ConnectTimeout=5 -i $HOME/.ssh/$KEYFILE $USER@$SYNCIP"
+	sshcmd="ssh -v -oStrictHostKeyChecking=no -p $PORT -o BatchMode=yes -o ConnectTimeout=5 -i $HOME/.ssh/$KEYFILE $USER@$PEERHOST"
 	echo -e $CHANGESET | $sshcmd > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 	  echo -e "\t    status:\t error applying changeset"
