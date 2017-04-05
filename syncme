@@ -1,4 +1,7 @@
 #!/bin/bash
+# The initial basis for this code was taken from the GitHub project vyatta-config-sync by Keshav Varma
+# This is a heavily stripped down version of that code designed to sync 2 routers only just got firewall and may settings only
+#
 # Uses Private/Public Key to perform SSH connection between device
 # Configure user on both VYOS routers to be peer synced and put that user into variable USER
 # Place the private key in $HOME/.ssh/$KEYFILE location 
