@@ -1,6 +1,6 @@
 #!/bin/bash
 # The initial basis for this code was taken from the GitHub project vyatta-config-sync by Keshav Varma
-# This is a heavily stripped down version of that code designed to sync 2 routers only just got firewall and may settings only
+# This is a heavily stripped down version of that code designed to sync 2 routers only for Firewall and NAT settings only
 #
 # Uses Private/Public Key to perform SSH connection between device
 # Configure user on both VYOS routers to be peer synced and put that user into variable USER
@@ -11,6 +11,14 @@
 # 
 # Add vyosautobuild.key with chown and chmod settings to users .ssh folder
 # Configure the peer hostname using set system static-host-mapping host-name syncpeer inet xxx.xxx.xxx.xxx
+#
+# Script will ONLY perform the Sync for the specific user, this is so that we do not have SSH key files all over the Place
+# If the script is run from that user then it proceeds otherwise it will sudo -l the script file for the correct user 
+#
+# The script will attempt to collect the "set firewall" and "set nat" commands from the local configuration and create a simple 
+# command structure embedding the VYOS CLI commands into the data to be sent over the network connection
+# 
+# Configuration data is held in /etc/syncme.cfg which is setup initially to use defaults on 1st run
 #
 CFGFILE=/etc/syncme.cfg 
 IAM=`whoami`
