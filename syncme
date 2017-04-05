@@ -1,0 +1,67 @@
+#!/bin/bash
+# Uses Private/Public Key to perform SSH connection between device
+# Configure user on both VYOS routers to be peer synced and put that user into variable USER
+# Place the private key in $HOME/.ssh/$KEYFILE location 
+# Place the public key in $HOME/.ssh/authorized_keys
+# Ensure that both have permissions of 600 and have owner of USER variable name
+# Modify SCRIPT variable to match the location and name of this script 
+# 
+# Add vyosautobuild.key with chown and chmod settings to users .ssh folder
+# Configure the peer hostname using set system static-host-mapping host-name syncpeer inet xxx.xxx.xxx.xxx
+#
+CFGFILE=/etc/syncme.cfg 
+IAM=`whoami`
+HOSTNAME=`hostname`
+if [ -f $CFGFILE ]; then
+	echo 'USER="syncme"' > $CFGFILE 
+	echo 'SCRIPT=/usr/local/bin/scriptme' >> $CFGFILE 
+	echo 'PEERHOST=syncpeer'
+	echo 'KEYFILE="vyosautosync.key"' >> $CFGFILE  
+	echo 'PORT=22' >> $CFGFILE 
+	echo "Review the content of $CFGFILE"
+	echo "Perform the following Checks and Modifications"
+	echo "1) Ensure that the USER value is correct and has been created manually inside both VYOS routers with admin level"
+	echo "2) Create a Public/Private Key Pair and store the PRIVATE key at $HOME/.ssh/$KEYFILE"
+	echo "3) Import the Public Key for the specified user using Configuration Command 'loadkey $USER $PUBLICKEYFILENAME'"
+	echo ""
+	echo "User should look something like this ..."
+	echo " set system login user syncme encrypted-password '!'"
+	echo " set system login user syncme plaintext-password ' '"
+	echo " set system login user syncme public-keys KEYNAME key 'blah blah blah'"
+	echo " set system login user syncme authentication public-keys KEYNAME type 'ssh-rsa'"
+	echo " set system login user syncme level 'admin'"
+	echo "4) If installing the script somewhere else then update the SCRIPT to reflect the script name and location"
+	echo "5) Ensure that PEERHOST is defined on both routers that point at the other router on the desired SSH interface"
+	echo "   this should use the 'set system static-host-mapping host-name syncpeer inet xxx.xxx.xxx.xxx' format"
+	echo "6) If using a non standard TCP port to SSH to the other host then change it"
+	echo "Modify it and ensure that the USER is created inside the VYOS routers to be peer synched"
+	exit 4
+fi
+source $CFGFILE 
+if [ $IAM = $USER ]; then	
+	commands=`cli-shell-api showConfig --show-active-only --show-commands | egrep "^set 'firewall'|^set 'nat'"`
+	mapfile -t commands <<< "$commands"
+#	echo -e "\t changeset: ##############"
+	CHANGESET="#!/bin/vbash\nsource /opt/vyatta/etc/functions/script-template\ndelete firewall;delete nat;"
+        cnt=0
+	for i in "${commands[@]}"
+	  do
+#		echo -e "    $i"
+		CHANGESET+="$i;"
+                cnt=$((cnt+1))
+	  done
+	CHANGESET+="commit;save"
+        echo "Sending $cnt lines of configuration to Remote Router syncpeer"
+#	echo -e "\t            ##############"
+	sshcmd="ssh -v -oStrictHostKeyChecking=no -p $PORT -o BatchMode=yes -o ConnectTimeout=5 -i $HOME/.ssh/$KEYFILE $USER@$SYNCIP"
+	echo -e $CHANGESET | $sshcmd > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	  echo -e "\t    status:\t error applying changeset"
+	  echo -e ""
+	  exit 1
+	fi
+	echo -e "\t    status:\tsynced"
+else 
+	sudo su -l -c $SCRIPT $USER
+fi
+

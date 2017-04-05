@@ -1,0 +1,19 @@
+SHELL_API=/bin/cli-shell-api
+function atexit() {
+  cli-shell-api teardownSession
+}
+# Obtain session environment
+session_env=$($SHELL_API getSessionEnv $PPID)
+# Evaluate Environment String
+eval $session_env
+# Setup the session
+cli-shell-api setupSession
+cli-shell-api inSession
+if [ $? -ne 0 ]; then
+  echo "Something went wrong with session setup!"
+fi
+
+cli-shell-api showConfig --show-context-diff --show-cfg1 @ACTIVE --show-cfg2 @WORKING
+
+
+
